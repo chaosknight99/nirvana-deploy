@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Sample portfolio website for a freelance web developer and designer."
+    />
+    <title>Avery Stone | Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav">
+        <a href="#top" class="brand" aria-label="Avery Stone home">
+          <span class="brand-mark">A</span>
+          <span>Avery Stone</span>
+        </a>
+
+        <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="#about">About</a>
+          <a href="#services">Services</a>
+          <a href="#work">Work</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Web Developer &amp; Designer</p>
+            <h1>Building clean websites for brands that want to stand out.</h1>
+            <p class="lead">
+              I create fast, memorable digital experiences for startups, creatives,
+              and service businesses that need a modern online presence.
+            </p>
+            <div class="actions">
+              <a class="button primary" href="#work">View Projects</a>
+              <a class="button secondary" href="#contact">Book a Call</a>
+            </div>
+            <ul class="stats" aria-label="Key stats">
+              <li><strong>6+</strong><span>Years Experience</span></li>
+              <li><strong>42</strong><span>Projects Launch</span></li>
+              <li><strong>99%</strong><span>Client Satisfaction</span></li>
+            </ul>
+          </div>
+
+          <div class="hero-card">
+            <div class="profile-panel">
+              <div class="badge">Available for work</div>
+              <div class="avatar-wrap">
+                <div class="avatar">AS</div>
+              </div>
+              <h2>Avery Stone</h2>
+              <p>Designing systems, interfaces, and websites with conversion in mind.</p>
+              <div class="mini-grid">
+                <div>
+                  <span>Focus</span>
+                  <strong>Brand Sites</strong>
+                </div>
+                <div>
+                  <span>Stack</span>
+                  <strong>HTML, CSS, JS</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="about">
+        <div class="container two-column">
+          <div>
+            <p class="eyebrow">About</p>
+            <h2>Thoughtful design and development that works hard.</h2>
+          </div>
+          <div>
+            <p>
+              I help businesses turn ideas into polished digital experiences. From</p>
+            <p>
+              strategy and visual direction to development and launch, every detail is
+              built to be clear, conversion-focused, and easy to maintain.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section muted" id="services">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Services</p>
+            <h2>What I do</h2>
+          </div>
+
+          <div class="card-grid three-up">
+            <article class="info-card">
+              <div class="icon">01</div>
+              <h3>Brand Websites</h3>
+              <p>High-converting landing pages and business websites tailored to your audience.</p>
+            </article>
+            <article class="info-card">
+              <div class="icon">02</div>
+              <h3>UI Design</h3>
+              <p>Modern interface design that balances clarity, personality, and usability.</p>
+            </article>
+            <article class="info-card">
+              <div class="icon">03</div>
+              <h3>Maintenance</h3>
+              <p>Ongoing updates, performance tuning, and support to keep your site healthy.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="work">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Selected Work</p>
+            <h2>Recent projects</h2>
+          </div>
+
+          <div class="project-grid">
+            <article class="project-card">
+              <div class="project-image project-one"></div>
+              <div class="project-copy">
+                <span>Brand Refresh</span>
+                <h3>North Peak Studio</h3>
+                <p>Strategy, UX design, and a conversion-focused marketing website.</p>
+              </div>
+            </article>
+
+            <article class="project-card">
+              <div class="project-image project-two"></div>
+              <div class="project-copy">
+                <span>Portfolio</span>
+                <h3>Solace Collective</h3>
+                <p>Creative portfolio experience built to spotlight visual work and bookings.</p>
+              </div>
+            </article>
+
+            <article class="project-card">
+              <div class="project-image project-three"></div>
+              <div class="project-copy">
+                <span>Start-up Launch</span>
+                <h3>Bloom &amp; Co.</h3>
+                <p>Launch page with product storytelling, email capture, and strong messaging.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section accent">
+        <div class="container quote-wrap">
+          <p class="eyebrow light">Client Feedback</p>
+          <blockquote>
+            “Avery made the whole process easy and delivered a site that feels premium,
+            clear, and genuinely aligned with our brand.”
+          </blockquote>
+          <p class="quote-author">— Erica M., Founder at North Peak Studio</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" id="contact">
+      <div class="container footer-grid">
+        <div>
+          <a href="#top" class="brand footer-brand">
+            <span class="brand-mark">A</span>
+            <span>Avery Stone</span>
+          </a>
+          <p>Helping ambitious brands look polished online.</p>
+        </div>
+
+        <div>
+          <h3>Contact</h3>
+          <ul>
+            <li><a href="mailto:avery@yourdomain.com">avery@yourdomain.com</a></li>
+            <li><a href="tel:+15551234567">+1 (555) 123-4567</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3>Follow</h3>
+          <ul>
+            <li><a href="https://www.linkedin.com" target="_blank" rel="noreferrer">LinkedIn</a></li>
+            <li><a href="https://dribbble.com" target="_blank" rel="noreferrer">Dribbble</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="container">
+          <p>© <span id="year"></span> Avery Stone. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
