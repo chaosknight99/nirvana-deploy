@@ -1,0 +1,7 @@
+[
+  {"file":"ai-engineering.md","title":"AI Engineering & Systems","color":"#57e0c9"},
+  {"file":"cloud-platform.md","title":"Cloud Platform Engineering","color":"#7fa8f0"},
+  {"file":"kubernetes-mastery.md","title":"Kubernetes Mastery","color":"#b98bf0"},
+  {"file":"rag-engineering.md","title":"RAG Engineering","color":"#ff8ad4"},
+  {"file":"security-identity.md","title":"Security & Identity","color":"#f3c25c"}
+]
