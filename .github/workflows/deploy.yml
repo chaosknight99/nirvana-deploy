@@ -1,4 +1,4 @@
-name: Deploy Portfolio to Hostnirvana (SFTP)
+name: Deploy Working HTML to Hostnirvana (SFTP)
 
 on:
   push:
@@ -14,13 +14,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Prepare deploy root
+        run: |
+          mkdir -p deploy-root
+          cp cosmic_atlas_3d_celestial_roadmap-3.html deploy-root/index.html
+
       - name: Deploy via SFTP
         uses: easingthemes/ssh-deploy@v5.0.3
         with:
           SSH_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
-          REMOTE_HOST: ssh.us.stackcp.com
+          REMOTE_HOST: ${{ secrets.SFTP_HOST }}
           REMOTE_USER: ${{ secrets.SFTP_USERNAME }}
           REMOTE_PORT: ${{ secrets.SFTP_PORT }}
-          SOURCE: "./"
+          SOURCE: "./deploy-root/"
           TARGET: ${{ secrets.SFTP_TARGET_DIR }}
-          EXCLUDE: "/.git/, /.github/, /*.md, /deploy.sh, /.DS_Store"
+          EXCLUDE: "/.git/, /.github/, /.DS_Store, /deploy.sh"

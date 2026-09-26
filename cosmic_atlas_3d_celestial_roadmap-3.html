@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COSMIC ATLAS — 3D Celestial Roadmap & Conquest Engine</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                screens: {
+                    'xs': '475px',
+                    'sm': '640px',
+                    'md': '768px',
+                    'lg': '1024px',
+                    'xl': '1280px',
+                },
+                extend: {
+                    colors: {
+                        space: {
+                            bg: '#040612',
+                            card: 'rgba(8, 12, 30, 0.85)',
+                            border: 'rgba(120, 140, 200, 0.22)',
+                            hover: 'rgba(255, 255, 255, 0.08)'
+                        },
+                        cosmic: {
+                            magenta: '#ff52ba',
+                            cyan: '#00f0ff',
+                            lavender: '#b185ff',
+                            teal: '#00a896',
+                            gold: '#ffd700',
+                            dimGold: '#8a7740'
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Cinzel', 'Georgia', 'serif'],
+                        mono: ['Fira Code', 'monospace'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --accent-glow: #00f0ff;
+            --bg-deep: #040612;
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-deep);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }
+
+        /* Glassmorphism panel styling */
+        .glass-panel {
+            background: rgba(6, 10, 26, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(120, 160, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-panel-gold {
+            background: rgba(22, 18, 12, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 215, 0, 0.35);
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.12);
+        }
+
+        /* Celestial Overlay */
+        .celestial-grid-overlay {
+            background-image: radial-gradient(circle at center, rgba(12, 20, 50, 0.08) 0%, rgba(4, 6, 18, 0.92) 85%);
+            pointer-events: none;
+        }
+
+        /* Glow utilities */
+        .text-glow-cyan { text-shadow: 0 0 12px rgba(0, 240, 255, 0.7); }
+        .text-glow-gold { text-shadow: 0 0 14px rgba(255, 215, 0, 0.8); }
+        .box-glow-cyan { box-shadow: 0 0 20px rgba(0, 240, 255, 0.35); }
+        .box-glow-gold { box-shadow: 0 0 22px rgba(255, 215, 0, 0.4); }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(5, 8, 22, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 130, 200, 0.3); border-radius: 3px; }
+
+        @keyframes rayRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow { animation: rayRotate 65s linear infinite; }
+
+        /* Projected Node HTML Labels */
+        .node-label {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+            white-space: nowrap;
+        }
+        .node-label:hover {
+            transform: translate(-50%, -115%) scale(1.08);
+            z-index: 40 !important;
+        }
+
+        #webgl-container {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            cursor: grab;
+        }
+        #webgl-container:active { cursor: grabbing; }
+
+        .celestial-dial {
+            border: 1px dashed rgba(255, 215, 0, 0.15);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen overflow-hidden text-slate-200">
+
+    <div id="webgl-container"></div>
+    <div class="celestial-grid-overlay absolute inset-0 z-0"></div>
+
+    <!-- Outer Decorative Compass Ring (Desktop/Tablet) -->
+    <div class="hidden sm:flex absolute inset-4 md:inset-8 rounded-full border border-white/5 pointer-events-none items-center justify-center opacity-30">
+        <div class="celestial-dial w-full h-full animate-spin-slow"></div>
+        <div class="absolute w-[92%] h-[92%] celestial-dial border-cyan-500/10"></div>
+    </div>
+
+    <header class="absolute top-0 left-0 right-0 z-30 p-3 sm:p-4 md:px-8 flex items-center justify-between pointer-events-none gap-2">
+        <!-- Brand Title & Icon -->
+        <div class="flex items-center gap-2.5 pointer-events-auto">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-amber-400/50 bg-amber-500/10 flex items-center justify-center text-amber-300 box-glow-gold shrink-0">
+                <i data-lucide="compass" class="w-5 h-5 sm:w-6 sm:h-6 animate-spin-slow"></i>
+            </div>
+            <div>
+                <h1 class="font-serif font-bold text-base sm:text-xl md:text-2xl tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-amber-400 to-amber-100 text-glow-gold leading-tight">
+                    COSMIC ATLAS
+                </h1>
+                <p class="font-mono text-[9px] sm:text-[10px] tracking-wider text-amber-300/60 uppercase">Celestial Engine v3.5</p>
+            </div>
+        </div>
+
+        <!-- Mode Switcher (Centered / Tablet adaptive) -->
+        <div class="pointer-events-auto glass-panel p-1 rounded-full flex items-center gap-1">
+            <button id="btn-view-globe" onclick="switchView('globe')" class="px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-serif tracking-wider transition-all flex items-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-400/40">
+                <i data-lucide="globe-2" class="w-3.5 h-3.5"></i>
+                <span class="hidden md:inline">Celestial Globe</span>
+                <span class="md:hidden">Globe</span>
+            </button>
+            <button id="btn-view-map" onclick="switchView('map')" class="px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-serif tracking-wider transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/5">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span class="hidden md:inline">Constellation Map</span>
+                <span class="md:hidden">Map</span>
+            </button>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
+            <!-- Mobile HUD Toggles -->
+            <button onclick="toggleMobileHUD('territory')" title="Territory HUD" class="md:hidden glass-panel p-2 rounded-xl text-amber-300 border-amber-400/30 min-w-[38px] min-h-[38px] flex items-center justify-center">
+                <i data-lucide="crown" class="w-4 h-4"></i>
+            </button>
+            <button onclick="toggleMobileHUD('sectors')" title="Sector List" class="md:hidden glass-panel p-2 rounded-xl text-cyan-300 border-cyan-500/30 min-w-[38px] min-h-[38px] flex items-center justify-center">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Reset Camera -->
+            <button onclick="resetCameraFocus()" title="Reset View" class="glass-panel p-2 sm:p-2.5 rounded-xl text-slate-300 hover:text-cyan-300 transition-all min-w-[38px] min-h-[38px] flex items-center justify-center">
+                <i data-lucide="focus" class="w-4 h-4"></i>
+            </button>
+            
+            <!-- Snapshot Certificate -->
+            <button onclick="openExportModal()" title="Export Map" class="hidden sm:flex glass-panel p-2.5 rounded-xl text-amber-300 hover:text-amber-100 transition-all border-amber-400/30 min-w-[38px] min-h-[38px] items-center justify-center">
+                <i data-lucide="camera" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Workflow Drawer Button -->
+            <button id="btn-toggle-editor" onclick="toggleWorkflowDrawer()" class="glass-panel px-2.5 sm:px-3 py-2 rounded-xl text-xs font-mono text-cyan-300 hover:text-white border border-cyan-500/30 transition-all flex items-center gap-1.5 min-w-[38px] min-h-[38px] justify-center">
+                <i data-lucide="code-2" class="w-4 h-4 text-cyan-400"></i>
+                <span class="hidden lg:inline">⚡ Workflow Engine</span>
+            </button>
+
+            <!-- Audio Soundscape Toggle -->
+            <button id="btn-audio-toggle" onclick="toggleAudio()" title="Soundscape" class="glass-panel p-2 sm:p-2.5 rounded-xl text-slate-400 hover:text-amber-300 transition-all min-w-[38px] min-h-[38px] flex items-center justify-center">
+                <i data-lucide="volume-x" id="icon-audio" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Territory HUD Panel -->
+    <div id="hud-territory" class="absolute top-16 left-3 sm:left-4 md:left-8 z-20 w-[calc(100vw-24px)] xs:w-72 md:w-80 glass-panel-gold rounded-2xl p-3.5 sm:p-4 transition-all duration-300 hidden md:block border border-amber-400/30 max-h-[75vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-amber-500/20 pb-2 mb-2.5">
+            <div class="flex items-center gap-2">
+                <i data-lucide="crown" class="w-4 h-4 text-amber-400"></i>
+                <span class="font-serif text-xs tracking-wider uppercase text-amber-300 font-bold">Territory Conquest</span>
+            </div>
+            <button onclick="toggleMobileHUD('territory')" class="md:hidden text-amber-300/70 p-1">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <div class="mb-3">
+            <div class="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-0.5">Active Constellation Sector</div>
+            <div class="flex items-center gap-2">
+                <span id="hud-sector-dot" class="w-2.5 h-2.5 rounded-full bg-cyan-400 box-glow-cyan shrink-0"></span>
+                <span id="hud-sector-name" class="font-serif text-xs sm:text-sm font-semibold text-slate-100 truncate">AI Engineering Atlas</span>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <div class="flex justify-between items-baseline font-serif">
+                <span class="text-xs text-amber-200/80">Celestial Resonance</span>
+                <span id="hud-resonance-val" class="font-mono text-sm text-amber-300 font-bold text-glow-gold">0%</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-slate-900 border border-amber-500/30 overflow-hidden p-0.5">
+                <div id="hud-progress-fill" class="h-full rounded-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-200 w-0 transition-all duration-700 shadow-[0_0_12px_rgba(255,215,0,0.8)]"></div>
+            </div>
+            <div class="flex justify-between text-[11px] font-mono text-slate-400 pt-0.5">
+                <span>Illuminated Stars:</span>
+                <span id="hud-nodes-count" class="text-amber-200">0 / 0 Stars</span>
+            </div>
+        </div>
+
+        <div class="mt-3 pt-2 border-t border-amber-500/15 flex items-center justify-between">
+            <span class="text-[10px] font-mono text-slate-400 uppercase">Rank:</span>
+            <span id="hud-rank-title" class="font-serif text-xs font-semibold text-amber-300 tracking-wide truncate">Neophyte Stargazer</span>
+        </div>
+    </div>
+
+    <!-- Constellation Sectors HUD Panel -->
+    <div id="hud-roadmap-selector" class="absolute top-16 right-3 sm:right-4 md:right-8 z-20 glass-panel rounded-2xl p-2.5 flex-col gap-1 w-[calc(100vw-24px)] xs:w-64 md:w-64 hidden md:flex border border-cyan-500/20 max-h-[60vh]">
+        <div class="px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-widest text-slate-400 border-b border-white/5 flex justify-between items-center">
+            <span>Sectors</span>
+            <div class="flex items-center gap-2">
+                <span id="roadmap-count-badge" class="text-cyan-400">5 Active</span>
+                <button onclick="toggleMobileHUD('sectors')" class="md:hidden text-slate-400 p-1">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        </div>
+        <div id="roadmap-list-container" class="space-y-1 overflow-y-auto max-h-48 pr-1 mt-1">
+            <!-- Dynamic list inserted via JS -->
+        </div>
+    </div>
+
+    <!-- Node Detail Panel (Adaptive Bottom Sheet on Mobile, Floating Panel on Tablet/Desktop) -->
+    <div id="node-detail-panel" class="fixed bottom-0 left-0 right-0 md:right-auto md:left-8 md:bottom-6 z-40 w-full md:w-96 glass-panel rounded-t-3xl md:rounded-2xl p-4 sm:p-5 border-t md:border border-cyan-500/40 transition-all duration-300 transform translate-y-full opacity-0 pointer-events-none max-h-[80vh] overflow-y-auto">
+        <!-- Mobile Handle Bar -->
+        <div class="w-12 h-1 bg-slate-700/60 rounded-full mx-auto mb-3 md:hidden"></div>
+
+        <button onclick="closeDetailPanel()" class="absolute top-3 right-3 text-slate-400 hover:text-white p-1.5 rounded-lg bg-white/5 md:bg-transparent">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        
+        <div class="flex items-center gap-2 mb-2 pr-6">
+            <span id="panel-node-type" class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">Main Star</span>
+            <span id="panel-node-status" class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">Dormant</span>
+        </div>
+
+        <h3 id="panel-node-title" class="font-serif font-bold text-base sm:text-lg text-slate-100 mb-2">Tokenization & Embeddings</h3>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-white/10 mb-3 text-xs font-serif">
+            <button id="tab-btn-overview" onclick="switchDetailTab('overview')" class="px-3 py-1.5 border-b-2 border-cyan-400 text-cyan-300 font-medium">Overview</button>
+            <button id="tab-btn-notes" onclick="switchDetailTab('notes')" class="px-3 py-1.5 text-slate-400 hover:text-slate-200">Field Notes 📝</button>
+        </div>
+
+        <!-- Tab 1: Overview & Subtopics -->
+        <div id="tab-content-overview">
+            <p id="panel-node-desc" class="text-xs text-slate-300 leading-relaxed mb-3">
+                Master the core foundational mechanisms of transforming raw string text into high-dimensional vector representations.
+            </p>
+
+            <div id="panel-subtopics-wrap" class="mb-4 space-y-1.5">
+                <div class="text-[10px] font-mono uppercase text-slate-400 mb-1">Bound Constellation Stars:</div>
+                <div id="panel-subtopics-list" class="space-y-1.5 max-h-32 overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Personal Astromancer Field Notes -->
+        <div id="tab-content-notes" class="hidden mb-4">
+            <div class="text-[10px] font-mono uppercase text-slate-400 mb-1">Personal Learnings & Logs:</div>
+            <textarea id="star-notes-input" oninput="saveCurrentStarNotes()" placeholder="Type key insights, links, or code snippets here..." class="w-full h-24 sm:h-28 p-2.5 rounded-xl bg-slate-950/80 border border-slate-700 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-400 resize-none"></textarea>
+            <div class="text-[9px] font-mono text-cyan-400/70 mt-1">✓ Saved automatically</div>
+        </div>
+
+        <!-- Action Button -->
+        <button id="panel-btn-conquer" onclick="toggleCurrentNodeConquest()" class="w-full py-2.5 sm:py-3 rounded-xl font-serif text-xs uppercase tracking-widest font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 hover:from-cyan-400 hover:to-blue-500 box-glow-cyan active:scale-98">
+            <i data-lucide="sun" class="w-4 h-4"></i>
+            <span id="panel-btn-text">Ignite Star & Conquer</span>
+        </button>
+    </div>
+
+    <!-- Workflow Editor Drawer -->
+    <div id="workflow-drawer" class="fixed inset-y-0 right-0 z-50 w-full max-w-xl glass-panel border-l border-cyan-500/30 transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                    <i data-lucide="file-code-2" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="font-serif font-bold text-sm sm:text-base text-slate-100">Markdown Compiler</h2>
+                    <p class="font-mono text-[10px] sm:text-[11px] text-cyan-300/70">Edit .md content & re-map 3D stars</p>
+                </div>
+            </div>
+            <button onclick="toggleWorkflowDrawer()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="p-3 sm:p-5 flex-1 flex flex-col gap-3 overflow-y-auto">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                <select id="md-file-select" onchange="loadSelectedMarkdownFile(this.value)" class="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400">
+                    <!-- Dynamic choices -->
+                </select>
+
+                <label class="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-slate-300 cursor-pointer flex items-center justify-center gap-1.5 shrink-0">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Upload .md</span>
+                    <input type="file" id="md-file-upload" accept=".md,.txt" onchange="handleFileUpload(event)" class="hidden">
+                </label>
+            </div>
+
+            <div class="flex-1 flex flex-col min-h-[250px] relative rounded-xl border border-slate-800 bg-slate-950/90 overflow-hidden">
+                <div class="px-3 py-1.5 border-b border-slate-800 flex justify-between items-center text-[10px] font-mono text-slate-400">
+                    <span>Markdown Syntax</span>
+                    <span class="text-amber-400/80">## = Star | - = Subtopic</span>
+                </div>
+                <textarea id="md-editor-input" class="w-full flex-1 p-3 bg-transparent font-mono text-xs text-slate-200 focus:outline-none resize-none leading-relaxed" spellcheck="false"></textarea>
+            </div>
+        </div>
+
+        <div class="p-3 sm:p-4 border-t border-white/10 flex items-center justify-between gap-2 bg-slate-950/50">
+            <button onclick="resetCurrentRoadmapProgress()" class="px-3 py-2.5 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-mono flex items-center gap-1.5">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Reset Progress</span>
+                <span class="sm:hidden">Reset</span>
+            </button>
+            
+            <button onclick="executeWorkflowCompiler()" class="flex-1 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white font-serif text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 box-glow-cyan">
+                <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i>
+                <span>Build 3D Map</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Export Certificate Modal -->
+    <div id="export-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="glass-panel-gold rounded-3xl p-5 sm:p-6 w-full max-w-lg border border-amber-400/40 relative flex flex-col items-center text-center max-h-[90vh] overflow-y-auto">
+            <button onclick="closeExportModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <i data-lucide="award" class="w-9 h-9 text-amber-300 mb-2 box-glow-gold rounded-full p-2 bg-amber-500/20"></i>
+            <h2 class="font-serif font-bold text-lg sm:text-xl text-amber-200 text-glow-gold">Celestial Map Certificate</h2>
+            <p class="font-mono text-xs text-amber-300/70 mb-3">Export high-res 3D snapshot</p>
+
+            <div class="w-full h-40 sm:h-48 rounded-xl border border-amber-500/30 bg-slate-950 overflow-hidden mb-3 relative flex items-center justify-center">
+                <img id="export-preview-img" class="w-full h-full object-cover" alt="Constellation Snapshot">
+            </div>
+
+            <div class="w-full flex items-center justify-between text-xs font-mono text-slate-300 mb-4 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+                <span>Rank: <strong id="export-rank-text" class="text-amber-300">Astromancer</strong></span>
+                <span>Date: <strong id="export-date-text" class="text-cyan-300">2026</strong></span>
+            </div>
+
+            <button onclick="downloadMapSnapshot()" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-300 text-slate-950 font-serif text-xs font-bold uppercase tracking-widest box-glow-gold flex items-center justify-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Download Snapshot Image</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_MARKDOWNS = [
+            {
+                id: 'ai-eng',
+                title: 'AI Engineering Atlas',
+                color: '#00f0ff',
+                content: `# AI Engineering Atlas\n> Master the frontier of artificial intelligence, LLM systems, RAG, and agentic workflows.\n\n## 1. LLM Foundations & Attention\n- Tokenization & Byte-Pair Encoding\n- Transformer Self-Attention Mechanics\n- Context Windows & Sampling Temperatures\n- Quantization & FP8/AWQ Tradeoffs\n\n## 2. Enterprise RAG Architecture\n- Vector Databases & Hybrid Search\n- Chunking Strategies & Semantic Splitting\n- Reranking Models & Context Compression\n- Groundedness Testing & Hallucination Metrics\n\n## 3. Autonomous Agents & MCP\n- ReAct & Tool Execution Loops\n- Model Context Protocol (MCP) Servers\n- Multi-Agent Orchestration Patterns\n- Human-in-the-Loop Safeguards\n\n## 4. Production Inference Platforms\n- vLLM & Continuous Batching\n- PagedAttention & Memory Management\n- Model Routers & Semantic Caching\n- GPU Operator & K8s Autoscale`
+            },
+            {
+                id: 'fullstack-dev',
+                title: 'Fullstack Dev Cosmos',
+                color: '#ff52ba',
+                content: `# Fullstack Dev Cosmos\n> Architect modern high-scale web apps, distributed APIs, and cloud services.\n\n## 1. Modern Frontend Core\n- Next.js App Router & Server Components\n- Tailwind CSS & Design Token Systems\n- State Management & React Query\n- WebGL & Canvas Rendering\n\n## 2. Distributed Backend APIs\n- FastAPI & Node.js Microservices\n- GraphQL & gRPC Protocols\n- Redis Caching & Rate Limiting\n- Event-Driven Architecture with Kafka\n\n## 3. Database Engineering\n- PostgreSQL & Advanced Indexing\n- Database Migration Workflows\n- ORMs & Connection Pooling\n- Distributed ACID Transactions\n\n## 4. Cloud Native DevOps\n- Docker & Kubernetes Orchestration\n- Terraform Infrastructure as Code\n- CI/CD Pipelines & Blue-Green Deploys\n- OpenTelemetry & Observability`
+            },
+            {
+                id: 'cybersecurity',
+                title: 'Cybersecurity Nebula',
+                color: '#00a896',
+                content: `# Cybersecurity Nebula\n> Defensive engineering, offensive security operations, and zero-trust architectures.\n\n## 1. Network & Protocol Security\n- TLS 1.3 & Certificate Chains\n- Packet Analysis & Wireshark\n- Firewalls & Zero Trust Segmentation\n- VPNs & Software Defined Perimeters\n\n## 2. Application Pentesting\n- OWASP Top 10 Exploitation\n- SQL Injection & XSS Payloads\n- OAuth2 & JWT Attack Vectors\n- Reverse Engineering Binaries\n\n## 3. Cloud Security & DevSecOps\n- AWS/Azure IAM Principle of Least Privilege\n- Container Image Vulnerability Scanning\n- Secrets Management & HashiCorp Vault\n- Static & Dynamic Code Analysis (SAST/DAST)\n\n## 4. Incident Response & Threat Hunting\n- SIEM Logs & Elastic Security\n- Endpoint Detection & Response (EDR)\n- Memory Forensics & YARA Rules\n- Threat Intelligence & MITRE ATT&CK Framework`
+            },
+            {
+                id: 'quantum-comp',
+                title: 'Quantum Computing Orbit',
+                color: '#b185ff',
+                content: `# Quantum Computing Orbit\n> Quantum algorithms, Qiskit, error correction, and quantum hardware paradigms.\n\n## 1. Quantum Mechanics Core\n- Qubits, Superposition & Bloch Sphere\n- Quantum Entanglement & Bell States\n- Quantum Gates & Circuit Diagrams\n- Decoherence & Quantum Noise\n\n## 2. Algorithms & Software\n- Shor's Prime Factorization Algorithm\n- Grover's Quantum Search Algorithm\n- Variational Quantum Eigensolver (VQE)\n- Qiskit & Cirq SDK Frameworks\n\n## 3. Quantum Error Correction\n- Surface Codes & Logical Qubits\n- Fault-Tolerant Quantum Computation\n- Syndrome Measurement Loops\n- Quantum Key Distribution (QKD)`
+            },
+            {
+                id: 'data-science',
+                title: 'Data Science Galaxy',
+                color: '#ffd700',
+                content: `# Data Science Galaxy\n> Statistical modeling, deep learning architectures, MLOps, and big data pipelines.\n\n## 1. Exploratory Data & Stats\n- Probability Distributions & Hypothesis Testing\n- Feature Engineering & Scaling\n- Dimensionality Reduction (PCA, t-SNE)\n- Pandas & Polars Performance Tuning\n\n## 2. Deep Learning Systems\n- PyTorch Neural Network Training\n- Convolutional & Recurrent Networks\n- Hyperparameter Optimization (Optuna)\n- Loss Functions & Gradient Descent\n\n## 3. MLOps & Model Registry\n- MLflow Experiment Tracking\n- Feature Stores (Feast)\n- Data Version Control (DVC)\n- Model Monitoring & Drift Detection`
+            }
+        ];
+
+        let audioCtx = null;
+        let isAudioMuted = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playCelestialChime(freq = 440, type = 'sine') {
+            if (isAudioMuted || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + 0.8);
+                
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.8);
+            } catch (e) { console.error(e); }
+        }
+
+        function playConquestFanfare() {
+            if (isAudioMuted || !audioCtx) return;
+            const chord = [523.25, 659.25, 783.99, 1046.50];
+            chord.forEach((f, i) => setTimeout(() => playCelestialChime(f, 'triangle'), i * 120));
+        }
+
+        function toggleAudio() {
+            initAudio();
+            isAudioMuted = !isAudioMuted;
+            const icon = document.getElementById('icon-audio');
+            if (isAudioMuted) {
+                icon.setAttribute('data-lucide', 'volume-x');
+            } else {
+                icon.setAttribute('data-lucide', 'volume-2');
+                playCelestialChime(523.25);
+            }
+            lucide.createIcons();
+        }
+
+        let roadmapsData = [];
+        let activeRoadmapIdx = 0;
+        let activeView = 'globe';
+        let conqueredNodesMap = {};
+        let starNotesMap = {};
+        let selectedNode = null;
+
+        // Three.js Core Variables
+        let scene, camera, renderer, controls;
+        let globeGroup, constellationGroup, starfieldParticles, nebulaParticles;
+        let projectedLabels = [];
+        let globeProjectedLabels = [];
+        let clickableMeshes = [];
+        let globeClickableMeshes = [];
+        let miniGalaxies = [];
+        let energyPulseParticles = [];
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+        let hoveredMesh = null;
+        let hoveredGlobeGalaxy = null;
+
+        // Mobile Touch Tracking variables
+        let touchStartX = 0, touchStartY = 0;
+
+        window.addEventListener('load', () => {
+            loadStoredData();
+            initThreeJS();
+            renderRoadmapSelectorList();
+            buildCurrentConstellation3D();
+            updateHUDStats();
+            setupRaycasterInteractivity();
+            lucide.createIcons();
+            animate();
+        });
+
+        function loadStoredData() {
+            const storedMd = localStorage.getItem('cosmic_atlas_roadmaps_v3');
+            if (storedMd) {
+                try { roadmapsData = JSON.parse(storedMd); } catch(e) { roadmapsData = DEFAULT_MARKDOWNS; }
+            } else {
+                roadmapsData = DEFAULT_MARKDOWNS;
+            }
+
+            const storedConquest = localStorage.getItem('cosmic_atlas_conquest_v3');
+            if (storedConquest) {
+                try { conqueredNodesMap = JSON.parse(storedConquest); } catch(e) { conqueredNodesMap = {}; }
+            }
+
+            const storedNotes = localStorage.getItem('cosmic_atlas_notes_v3');
+            if (storedNotes) {
+                try { starNotesMap = JSON.parse(storedNotes); } catch(e) { starNotesMap = {}; }
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('cosmic_atlas_roadmaps_v3', JSON.stringify(roadmapsData));
+            localStorage.setItem('cosmic_atlas_conquest_v3', JSON.stringify(conqueredNodesMap));
+            localStorage.setItem('cosmic_atlas_notes_v3', JSON.stringify(starNotesMap));
+        }
+
+        function initThreeJS() {
+            const container = document.getElementById('webgl-container');
+            
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x040612, 0.007);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            // Adapt camera distance based on screen size
+            const isMobile = window.innerWidth < 640;
+            camera.position.set(0, 15, isMobile ? 55 : 45);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 140;
+            controls.minDistance = 8;
+            controls.rotateSpeed = isMobile ? 0.8 : 1.0;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+            scene.add(ambientLight);
+
+            const mainLight = new THREE.DirectionalLight(0xffd700, 1.2);
+            mainLight.position.set(30, 40, 20);
+            scene.add(mainLight);
+
+            const blueLight = new THREE.PointLight(0x00f0ff, 2.5, 90);
+            blueLight.position.set(-20, -10, -20);
+            scene.add(blueLight);
+
+            createStarfieldAndNebula();
+
+            globeGroup = new THREE.Group();
+            constellationGroup = new THREE.Group();
+            scene.add(globeGroup);
+            scene.add(constellationGroup);
+
+            create3DCelestialGlobe();
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createCircularParticleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.7)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.15)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 64, 64);
+            
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createStarfieldAndNebula() {
+            const particleTexture = createCircularParticleTexture();
+
+            const starsGeo = new THREE.BufferGeometry();
+            const count = window.innerWidth < 640 ? 2000 : 3500;
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+            const palette = [new THREE.Color(0x00f0ff), new THREE.Color(0xff52ba), new THREE.Color(0xb185ff), new THREE.Color(0xffd700), new THREE.Color(0xffffff)];
+
+            for (let i = 0; i < count; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 350;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 350;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 350;
+
+                const col = palette[Math.floor(Math.random() * palette.length)];
+                colors[i * 3] = col.r;
+                colors[i * 3 + 1] = col.g;
+                colors[i * 3 + 2] = col.b;
+            }
+
+            starsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            starsGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const starsMat = new THREE.PointsMaterial({ 
+                size: 1.2, 
+                vertexColors: true, 
+                transparent: true, 
+                opacity: 0.85,
+                map: particleTexture,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            starfieldParticles = new THREE.Points(starsGeo, starsMat);
+            scene.add(starfieldParticles);
+
+            const dustGeo = new THREE.BufferGeometry();
+            const dustCount = window.innerWidth < 640 ? 500 : 900;
+            const dustPos = new Float32Array(dustCount * 3);
+            const dustCols = new Float32Array(dustCount * 3);
+            const dustPalette = [new THREE.Color(0x00a896), new THREE.Color(0x00f0ff), new THREE.Color(0xb185ff), new THREE.Color(0x3a7bd5)];
+
+            for(let j = 0; j < dustCount; j++) {
+                dustPos[j * 3] = (Math.random() - 0.5) * 300;
+                dustPos[j * 3 + 1] = (Math.random() - 0.5) * 300;
+                dustPos[j * 3 + 2] = (Math.random() - 0.5) * 300;
+
+                const col = dustPalette[Math.floor(Math.random() * dustPalette.length)];
+                dustCols[j * 3] = col.r;
+                dustCols[j * 3 + 1] = col.g;
+                dustCols[j * 3 + 2] = col.b;
+            }
+            dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+            dustGeo.setAttribute('color', new THREE.BufferAttribute(dustCols, 3));
+
+            const dustMat = new THREE.PointsMaterial({ 
+                size: 2.2, 
+                vertexColors: true, 
+                transparent: true, 
+                opacity: 0.35, 
+                map: particleTexture,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending 
+            });
+            nebulaParticles = new THREE.Points(dustGeo, dustMat);
+            scene.add(nebulaParticles);
+        }
+
+        function create3DCelestialGlobe() {
+            while (globeGroup.children.length > 0) {
+                globeGroup.remove(globeGroup.children[0]);
+            }
+            clearGlobeProjectedLabels();
+            globeClickableMeshes = [];
+            miniGalaxies = [];
+
+            const sphereGeo = new THREE.SphereGeometry(12, 32, 32);
+            const sphereMat = new THREE.MeshStandardMaterial({
+                color: 0x081028,
+                roughness: 0.3,
+                metalness: 0.8,
+                transparent: true,
+                opacity: 0.75
+            });
+            const globeMesh = new THREE.Mesh(sphereGeo, sphereMat);
+            globeGroup.add(globeMesh);
+
+            const gridGeo = new THREE.IcosahedronGeometry(12.2, 3);
+            const gridMat = new THREE.MeshBasicMaterial({
+                color: 0x4060a0,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.18
+            });
+            const gridMesh = new THREE.Mesh(gridGeo, gridMat);
+            globeGroup.add(gridMesh);
+
+            const ringGeo = new THREE.RingGeometry(14, 14.2, 64);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0xffd700,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.35
+            });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.rotation.x = Math.PI / 3;
+            globeGroup.add(ringMesh);
+
+            const particleTex = createCircularParticleTexture();
+
+            roadmapsData.forEach((rm, idx) => {
+                const phi = (idx / roadmapsData.length) * Math.PI * 2;
+                const theta = (idx % 2 === 0 ? 1 : -1) * 0.4;
+                const radius = 14.5;
+
+                const x = radius * Math.cos(theta) * Math.cos(phi);
+                const y = radius * Math.sin(theta);
+                const z = radius * Math.cos(theta) * Math.sin(phi);
+
+                const galaxy = createMiniSpiralGalaxy(rm.color, rm.title, idx, particleTex);
+                galaxy.group.position.set(x, y, z);
+                galaxy.group.lookAt(x * 2, y * 2, z * 2);
+                galaxy.group.rotateX(Math.PI / 4);
+
+                globeGroup.add(galaxy.group);
+                globeClickableMeshes.push(galaxy.hitMesh);
+                miniGalaxies.push(galaxy);
+
+                createGlobeProjectedLabel(galaxy.hitMesh, rm.title, rm.color, idx);
+            });
+        }
+
+        function createMiniSpiralGalaxy(colorHex, title, roadmapIdx, particleTex) {
+            const galaxyGroup = new THREE.Group();
+            const color = new THREE.Color(colorHex);
+
+            const coreGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 });
+            const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+            galaxyGroup.add(coreMesh);
+
+            const auraGeo = new THREE.SphereGeometry(0.8, 16, 16);
+            const auraMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+            const auraMesh = new THREE.Mesh(auraGeo, auraMat);
+            galaxyGroup.add(auraMesh);
+
+            const particleCount = 240;
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const arms = 2;
+            const maxRadius = 2.4;
+            const coreColor = new THREE.Color(0xffffff);
+
+            for (let i = 0; i < particleCount; i++) {
+                const r = Math.pow(Math.random(), 1.4) * maxRadius;
+                const armOffset = (i % arms) * ((2 * Math.PI) / arms);
+                const spinAngle = r * 3.2;
+                const angle = armOffset + spinAngle;
+
+                const scatterX = (Math.random() - 0.5) * 0.35 * (r + 0.2);
+                const scatterY = (Math.random() - 0.5) * 0.15;
+                const scatterZ = (Math.random() - 0.5) * 0.35 * (r + 0.2);
+
+                positions[i * 3] = Math.cos(angle) * r + scatterX;
+                positions[i * 3 + 1] = scatterY;
+                positions[i * 3 + 2] = Math.sin(angle) * r + scatterZ;
+
+                const mixCol = coreColor.clone().lerp(color, r / maxRadius);
+                colors[i * 3] = mixCol.r;
+                colors[i * 3 + 1] = mixCol.g;
+                colors[i * 3 + 2] = mixCol.b;
+            }
+
+            const pGeo = new THREE.BufferGeometry();
+            pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            pGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const pMat = new THREE.PointsMaterial({
+                size: 0.45,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+                map: particleTex,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            const spiralParticles = new THREE.Points(pGeo, pMat);
+            galaxyGroup.add(spiralParticles);
+
+            const hitGeo = new THREE.SphereGeometry(2.4, 12, 12);
+            const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+            const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+            hitMesh.userData = { isGlobeNode: true, roadmapIdx: roadmapIdx, name: title, galaxyGroup: galaxyGroup };
+            galaxyGroup.add(hitMesh);
+
+            return { group: galaxyGroup, hitMesh, spiralParticles };
+        }
+
+        function createGlobeProjectedLabel(mesh3d, title, colorHex, roadmapIdx) {
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'node-label px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-serif glass-panel-gold border-amber-400/50 text-amber-200 flex items-center gap-1.5 box-glow-gold hover:scale-105 transition-transform cursor-pointer pointer-events-auto';
+            labelDiv.innerHTML = `
+                <i data-lucide="disc" class="w-3 h-3 animate-spin-slow" style="color: ${colorHex}"></i>
+                <span class="font-semibold tracking-wide truncate max-w-[120px] sm:max-w-[150px]">${title}</span>
+                <i data-lucide="arrow-right" class="w-3 h-3 text-amber-400/80"></i>
+            `;
+
+            labelDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectRoadmapSector(roadmapIdx);
+            });
+
+            document.body.appendChild(labelDiv);
+            globeProjectedLabels.push({ element: labelDiv, mesh: mesh3d, roadmapIdx: roadmapIdx });
+            lucide.createIcons();
+        }
+
+        function clearGlobeProjectedLabels() {
+            globeProjectedLabels.forEach(item => item.element.remove());
+            globeProjectedLabels = [];
+        }
+
+        function parseMarkdownToRoadmapNodes(mdText, themeColorHex) {
+            const lines = mdText.split('\n');
+            let mainTopics = [];
+            let currentMain = null;
+
+            lines.forEach((line) => {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('## ')) {
+                    const title = trimmed.replace('## ', '').trim();
+                    currentMain = {
+                        id: 'main-' + mainTopics.length,
+                        title: title,
+                        type: 'main',
+                        subtopics: []
+                    };
+                    mainTopics.push(currentMain);
+                } else if ((trimmed.startsWith('- ') || trimmed.startsWith('* ')) && currentMain) {
+                    const subTitle = trimmed.replace(/^[-*]\s*/, '').trim();
+                    currentMain.subtopics.push({
+                        id: `${currentMain.id}-sub-${currentMain.subtopics.length}`,
+                        title: subTitle,
+                        type: 'sub'
+                    });
+                }
+            });
+
+            return mainTopics;
+        }
+
+        function buildCurrentConstellation3D() {
+            while(constellationGroup.children.length > 0){ 
+                const obj = constellationGroup.children[0];
+                constellationGroup.remove(obj); 
+            }
+            clearProjectedLabels();
+            clickableMeshes = [];
+            energyPulseParticles = [];
+
+            const activeRoadmap = roadmapsData[activeRoadmapIdx];
+            const parsedTopics = parseMarkdownToRoadmapNodes(activeRoadmap.content, activeRoadmap.color);
+            const themeColor = new THREE.Color(activeRoadmap.color);
+
+            parsedTopics.forEach((topic, i) => {
+                const angle = (i / parsedTopics.length) * Math.PI * 2;
+                const radius = window.innerWidth < 640 ? 14 : 18;
+                const mx = Math.cos(angle) * radius;
+                const my = (i - parsedTopics.length / 2) * 3.5;
+                const mz = Math.sin(angle) * radius;
+
+                const isConquered = conqueredNodesMap[topic.id];
+
+                const starGeo = new THREE.SphereGeometry(isConquered ? 1.2 : 0.8, 16, 16);
+                const starMat = new THREE.MeshStandardMaterial({
+                    color: isConquered ? 0xffffff : themeColor,
+                    emissive: isConquered ? themeColor : 0x000000,
+                    emissiveIntensity: isConquered ? 1.5 : 0.2,
+                    roughness: 0.2
+                });
+                const starMesh = new THREE.Mesh(starGeo, starMat);
+                starMesh.position.set(mx, my, mz);
+                starMesh.userData = { nodeData: topic, nodeId: topic.id, roadmapIdx: activeRoadmapIdx };
+                constellationGroup.add(starMesh);
+                clickableMeshes.push(starMesh);
+
+                const haloGeo = new THREE.RingGeometry(1.4, 1.8, 32);
+                const haloMat = new THREE.MeshBasicMaterial({
+                    color: themeColor,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: isConquered ? 0.8 : 0.3
+                });
+                const haloMesh = new THREE.Mesh(haloGeo, haloMat);
+                haloMesh.position.set(mx, my, mz);
+                haloMesh.rotation.x = Math.PI / 2;
+                constellationGroup.add(haloMesh);
+
+                createProjectedHtmlLabel(starMesh, topic.title, 'main', isConquered, topic.id);
+
+                topic.subtopics.forEach((sub, j) => {
+                    const subAngle = (j / topic.subtopics.length) * Math.PI * 2;
+                    const subDist = window.innerWidth < 640 ? 4.5 : 6;
+                    const sx = mx + Math.cos(subAngle) * subDist;
+                    const sy = my + (j % 2 === 0 ? 1.5 : -1.5);
+                    const sz = mz + Math.sin(subAngle) * subDist;
+
+                    const isSubConquered = conqueredNodesMap[sub.id];
+
+                    const subGeo = new THREE.SphereGeometry(isSubConquered ? 0.6 : 0.4, 12, 12);
+                    const subMat = new THREE.MeshStandardMaterial({
+                        color: isSubConquered ? 0xffffff : themeColor,
+                        emissive: isSubConquered ? themeColor : 0x000000,
+                        emissiveIntensity: isSubConquered ? 1.2 : 0.1
+                    });
+                    const subMesh = new THREE.Mesh(subGeo, subMat);
+                    subMesh.position.set(sx, sy, sz);
+                    subMesh.userData = { nodeData: sub, nodeId: sub.id, parentMain: topic };
+                    constellationGroup.add(subMesh);
+                    clickableMeshes.push(subMesh);
+
+                    const lineMat = new THREE.LineBasicMaterial({
+                        color: isSubConquered ? 0xffd700 : themeColor,
+                        transparent: true,
+                        opacity: isSubConquered ? 0.85 : 0.25
+                    });
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(mx, my, mz),
+                        new THREE.Vector3(sx, sy, sz)
+                    ]);
+                    const line = new THREE.Line(lineGeo, lineMat);
+                    constellationGroup.add(line);
+
+                    createEnergyPulseBetween(new THREE.Vector3(mx, my, mz), new THREE.Vector3(sx, sy, sz), themeColor);
+
+                    createProjectedHtmlLabel(subMesh, sub.title, 'sub', isSubConquered, sub.id);
+                });
+
+                if (i < parsedTopics.length - 1) {
+                    const nextAngle = ((i + 1) / parsedTopics.length) * Math.PI * 2;
+                    const nmx = Math.cos(nextAngle) * radius;
+                    const nmy = (i + 1 - parsedTopics.length / 2) * 3.5;
+                    const nmz = Math.sin(nextAngle) * radius;
+
+                    const isMainPathConquered = isConquered && conqueredNodesMap[parsedTopics[i+1].id];
+
+                    const mainLineMat = new THREE.LineDashedMaterial({
+                        color: isMainPathConquered ? 0xffd700 : themeColor,
+                        dashSize: 0.8,
+                        gapSize: 0.4,
+                        transparent: true,
+                        opacity: isMainPathConquered ? 1.0 : 0.4
+                    });
+                    const mainLineGeo = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(mx, my, mz),
+                        new THREE.Vector3(nmx, nmy, nmz)
+                    ]);
+                    const mainLine = new THREE.Line(mainLineGeo, mainLineMat);
+                    mainLine.computeLineDistances();
+                    constellationGroup.add(mainLine);
+
+                    createEnergyPulseBetween(new THREE.Vector3(mx, my, mz), new THREE.Vector3(nmx, nmy, nmz), themeColor);
+                }
+            });
+
+            if (activeView === 'globe') {
+                constellationGroup.visible = false;
+                globeGroup.visible = true;
+            } else {
+                constellationGroup.visible = true;
+                globeGroup.visible = false;
+            }
+        }
+
+        function createEnergyPulseBetween(p1, p2, color) {
+            const pulseGeo = new THREE.SphereGeometry(0.15, 8, 8);
+            const pulseMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.9 });
+            const pulseMesh = new THREE.Mesh(pulseGeo, pulseMat);
+            constellationGroup.add(pulseMesh);
+
+            energyPulseParticles.push({
+                mesh: pulseMesh,
+                start: p1,
+                end: p2,
+                progress: Math.random()
+            });
+        }
+
+        function updateEnergyPulses() {
+            energyPulseParticles.forEach(p => {
+                p.progress += 0.006;
+                if (p.progress > 1) p.progress = 0;
+                p.mesh.position.lerpVectors(p.start, p.end, p.progress);
+            });
+        }
+
+        function setupRaycasterInteractivity() {
+            const container = document.getElementById('webgl-container');
+
+            function handlePointerMove(clientX, clientY) {
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+                if (activeView === 'globe' && globeGroup.visible) {
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersects = raycaster.intersectObjects(globeClickableMeshes);
+
+                    if (intersects.length > 0) {
+                        const target = intersects[0].object;
+                        const parentGroup = target.userData.galaxyGroup;
+                        if (hoveredGlobeGalaxy !== parentGroup) {
+                            if (hoveredGlobeGalaxy) hoveredGlobeGalaxy.scale.set(1, 1, 1);
+                            hoveredGlobeGalaxy = parentGroup;
+                            if (hoveredGlobeGalaxy) hoveredGlobeGalaxy.scale.set(1.3, 1.3, 1.3);
+                            document.body.style.cursor = 'pointer';
+                            playCelestialChime(587.33);
+                        }
+                    } else {
+                        if (hoveredGlobeGalaxy) hoveredGlobeGalaxy.scale.set(1, 1, 1);
+                        hoveredGlobeGalaxy = null;
+                        if (!hoveredMesh) document.body.style.cursor = 'default';
+                    }
+                    return;
+                }
+
+                if (activeView === 'map' && constellationGroup.visible) {
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersects = raycaster.intersectObjects(clickableMeshes);
+
+                    if (intersects.length > 0) {
+                        const target = intersects[0].object;
+                        if (hoveredMesh !== target) {
+                            if (hoveredMesh) hoveredMesh.scale.set(1, 1, 1);
+                            hoveredMesh = target;
+                            hoveredMesh.scale.set(1.3, 1.3, 1.3);
+                            document.body.style.cursor = 'pointer';
+                            playCelestialChime(550);
+                        }
+                    } else {
+                        if (hoveredMesh) hoveredMesh.scale.set(1, 1, 1);
+                        hoveredMesh = null;
+                        document.body.style.cursor = 'default';
+                    }
+                }
+            }
+
+            container.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
+
+            // Touch events for mobile/iPad
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    handlePointerMove(touchStartX, touchStartY);
+                }
+            }, { passive: true });
+
+            container.addEventListener('touchend', (e) => {
+                if (e.changedTouches.length === 1) {
+                    const endX = e.changedTouches[0].clientX;
+                    const endY = e.changedTouches[0].clientY;
+                    const dist = Math.hypot(endX - touchStartX, endY - touchStartY);
+
+                    // If tap movement distance is small (<12px), trigger click handling
+                    if (dist < 12) {
+                        handlePointerClick();
+                    }
+                }
+            });
+
+            container.addEventListener('click', () => handlePointerClick());
+
+            function handlePointerClick() {
+                if (activeView === 'globe' && hoveredGlobeGalaxy) {
+                    const hitObj = globeClickableMeshes.find(m => m.userData.galaxyGroup === hoveredGlobeGalaxy);
+                    if (hitObj) selectRoadmapSector(hitObj.userData.roadmapIdx);
+                    return;
+                }
+
+                if (activeView === 'map' && hoveredMesh) {
+                    const nodeData = hoveredMesh.userData.nodeData;
+                    const nodeId = hoveredMesh.userData.nodeId;
+                    openStarNodeDetail(nodeData, nodeId);
+                    flyCameraToNode(hoveredMesh);
+                }
+            }
+        }
+
+        function flyCameraToNode(mesh3d) {
+            const worldPos = new THREE.Vector3();
+            mesh3d.getWorldPosition(worldPos);
+
+            const isMobile = window.innerWidth < 640;
+            const dist = isMobile ? 16 : 12;
+
+            gsapCameraMove(
+                worldPos.x + 4, worldPos.y + 2, worldPos.z + dist,
+                worldPos.x, worldPos.y, worldPos.z
+            );
+        }
+
+        function resetCameraFocus() {
+            const isMobile = window.innerWidth < 640;
+            if (activeView === 'globe') {
+                gsapCameraMove(0, 15, isMobile ? 55 : 45, 0, 0, 0);
+            } else {
+                gsapCameraMove(0, 10, isMobile ? 42 : 35, 0, 0, 0);
+            }
+        }
+
+        function createProjectedHtmlLabel(mesh3d, text, type, isConquered, nodeId) {
+            const labelDiv = document.createElement('div');
+            labelDiv.className = `node-label px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-serif transition-all duration-300 flex items-center gap-1 sm:gap-1.5 ${
+                type === 'main' 
+                    ? (isConquered ? 'glass-panel-gold text-amber-200 border-amber-400 box-glow-gold' : 'glass-panel text-slate-200 border-cyan-500/40') 
+                    : (isConquered ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-slate-950/70 text-slate-400 border border-white/10 text-[10px]')
+            }`;
+
+            labelDiv.innerHTML = `
+                <span class="w-1.5 h-1.5 rounded-full shrink-0 ${isConquered ? 'bg-amber-300 box-glow-gold' : 'bg-cyan-400'}"></span>
+                <span class="truncate max-w-[90px] sm:max-w-[120px] font-medium">${text}</span>
+            `;
+
+            labelDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openStarNodeDetail(mesh3d.userData.nodeData, nodeId);
+                flyCameraToNode(mesh3d);
+                playCelestialChime(isConquered ? 659.25 : 440);
+            });
+
+            document.body.appendChild(labelDiv);
+            projectedLabels.push({ element: labelDiv, mesh: mesh3d });
+        }
+
+        function clearProjectedLabels() {
+            projectedLabels.forEach(item => item.element.remove());
+            projectedLabels = [];
+        }
+
+        function updateProjectedLabelsPosition() {
+            if (activeView === 'globe') {
+                projectedLabels.forEach(item => item.element.style.display = 'none');
+
+                const tempV = new THREE.Vector3();
+                const worldPos = new THREE.Vector3();
+                const camPos = camera.position.clone();
+
+                globeProjectedLabels.forEach(item => {
+                    item.mesh.getWorldPosition(worldPos);
+
+                    const normal = worldPos.clone().normalize();
+                    const viewDir = camPos.clone().sub(worldPos).normalize();
+                    const isFrontFacing = normal.dot(viewDir) > 0.15;
+
+                    if (!isFrontFacing) {
+                        item.element.style.display = 'none';
+                        return;
+                    }
+
+                    tempV.copy(worldPos);
+                    tempV.project(camera);
+
+                    if (tempV.z > 1) {
+                        item.element.style.display = 'none';
+                        return;
+                    }
+
+                    const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+                    const y = (tempV.y * -0.5 + 0.5) * window.innerHeight;
+
+                    item.element.style.display = 'flex';
+                    item.element.style.left = `${x}px`;
+                    item.element.style.top = `${y}px`;
+                });
+                return;
+            }
+
+            globeProjectedLabels.forEach(item => item.element.style.display = 'none');
+
+            const tempV = new THREE.Vector3();
+            projectedLabels.forEach(item => {
+                item.mesh.getWorldPosition(tempV);
+                tempV.project(camera);
+
+                if (tempV.z > 1) {
+                    item.element.style.display = 'none';
+                    return;
+                }
+
+                const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (tempV.y * -0.5 + 0.5) * window.innerHeight;
+
+                item.element.style.display = 'flex';
+                item.element.style.left = `${x}px`;
+                item.element.style.top = `${y}px`;
+            });
+        }
+
+        function openStarNodeDetail(nodeData, nodeId) {
+            selectedNode = { data: nodeData, id: nodeId };
+            const panel = document.getElementById('node-detail-panel');
+            
+            document.getElementById('panel-node-title').textContent = nodeData.title;
+            document.getElementById('panel-node-type').textContent = nodeData.type === 'main' ? 'Major Star Sector' : 'Subtopic Star';
+            
+            const isConquered = !!conqueredNodesMap[nodeId];
+            const statusBadge = document.getElementById('panel-node-status');
+            statusBadge.textContent = isConquered ? 'Illuminated & Conquered' : 'Dormant Void';
+            statusBadge.className = `px-2 py-0.5 rounded text-[10px] font-mono uppercase ${
+                isConquered ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'
+            }`;
+
+            document.getElementById('panel-node-desc').textContent = nodeData.type === 'main'
+                ? `Major milestone topic in ${roadmapsData[activeRoadmapIdx].title}. Master all subtopic stars to achieve full constellation resonance.`
+                : `Specific technical capability star bound to ${selectedNode.data.title}.`;
+
+            const subList = document.getElementById('panel-subtopics-list');
+            subList.innerHTML = '';
+            if (nodeData.subtopics && nodeData.subtopics.length > 0) {
+                document.getElementById('panel-subtopics-wrap').style.display = 'block';
+                nodeData.subtopics.forEach(sub => {
+                    const isSubDone = !!conqueredNodesMap[sub.id];
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center gap-2 text-xs font-serif text-slate-300 py-0.5';
+                    item.innerHTML = `
+                        <input type="checkbox" ${isSubDone ? 'checked' : ''} onchange="toggleSubNodeConquest('${sub.id}')" class="rounded accent-amber-400 w-4 h-4">
+                        <span class="${isSubDone ? 'line-through text-amber-300/70' : ''}">${sub.title}</span>
+                    `;
+                    subList.appendChild(item);
+                });
+            } else {
+                document.getElementById('panel-subtopics-wrap').style.display = 'none';
+            }
+
+            document.getElementById('star-notes-input').value = starNotesMap[nodeId] || '';
+
+            const btnText = document.getElementById('panel-btn-text');
+            btnText.textContent = isConquered ? 'Extinguish Star (Reset)' : 'Ignite Star & Conquer';
+
+            switchDetailTab('overview');
+            panel.classList.remove('translate-y-full', 'opacity-0', 'pointer-events-none');
+        }
+
+        function switchDetailTab(tabName) {
+            const tabOverview = document.getElementById('tab-content-overview');
+            const tabNotes = document.getElementById('tab-content-notes');
+            const btnOverview = document.getElementById('tab-btn-overview');
+            const btnNotes = document.getElementById('tab-btn-notes');
+
+            if (tabName === 'overview') {
+                tabOverview.classList.remove('hidden');
+                tabNotes.classList.add('hidden');
+                btnOverview.className = 'px-3 py-1.5 border-b-2 border-cyan-400 text-cyan-300 font-medium';
+                btnNotes.className = 'px-3 py-1.5 text-slate-400 hover:text-slate-200';
+            } else {
+                tabNotes.classList.remove('hidden');
+                tabOverview.classList.add('hidden');
+                btnNotes.className = 'px-3 py-1.5 border-b-2 border-cyan-400 text-cyan-300 font-medium';
+                btnOverview.className = 'px-3 py-1.5 text-slate-400 hover:text-slate-200';
+            }
+        }
+
+        function saveCurrentStarNotes() {
+            if (!selectedNode) return;
+            const text = document.getElementById('star-notes-input').value;
+            starNotesMap[selectedNode.id] = text;
+            saveData();
+        }
+
+        function closeDetailPanel() {
+            const panel = document.getElementById('node-detail-panel');
+            panel.classList.add('translate-y-full', 'opacity-0', 'pointer-events-none');
+            selectedNode = null;
+        }
+
+        function toggleCurrentNodeConquest() {
+            if (!selectedNode) return;
+            const nodeId = selectedNode.id;
+            conqueredNodesMap[nodeId] = !conqueredNodesMap[nodeId];
+
+            if (conqueredNodesMap[nodeId]) {
+                playConquestFanfare();
+                triggerParticleBurstAtSelectedNode();
+            }
+
+            saveData();
+            buildCurrentConstellation3D();
+            updateHUDStats();
+            openStarNodeDetail(selectedNode.data, nodeId);
+        }
+
+        function toggleSubNodeConquest(subId) {
+            conqueredNodesMap[subId] = !conqueredNodesMap[subId];
+            if (conqueredNodesMap[subId]) playCelestialChime(783.99);
+            saveData();
+            buildCurrentConstellation3D();
+            updateHUDStats();
+            if (selectedNode) openStarNodeDetail(selectedNode.data, selectedNode.id);
+        }
+
+        function triggerParticleBurstAtSelectedNode() {
+            const count = window.innerWidth < 640 ? 45 : 75;
+            const burstGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const velocities = [];
+
+            for (let i = 0; i < count; i++) {
+                positions[i*3] = 0; positions[i*3+1] = 0; positions[i*3+2] = 0;
+                velocities.push(
+                    (Math.random() - 0.5) * 1.8,
+                    (Math.random() - 0.5) * 1.8,
+                    (Math.random() - 0.5) * 1.8
+                );
+            }
+
+            burstGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const burstMat = new THREE.PointsMaterial({ 
+                color: 0xffd700, 
+                size: 1.5, 
+                map: createCircularParticleTexture(),
+                transparent: true, 
+                opacity: 1,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const burstPoints = new THREE.Points(burstGeo, burstMat);
+            constellationGroup.add(burstPoints);
+
+            let frame = 0;
+            function animateBurst() {
+                if (frame > 45) {
+                    constellationGroup.remove(burstPoints);
+                    return;
+                }
+                const pos = burstPoints.geometry.attributes.position.array;
+                for (let i = 0; i < count; i++) {
+                    pos[i*3] += velocities[i].x;
+                    pos[i*3+1] += velocities[i].y;
+                    pos[i*3+2] += velocities[i].z;
+                }
+                burstPoints.geometry.attributes.position.needsUpdate = true;
+                burstMat.opacity -= 0.022;
+                frame++;
+                requestAnimationFrame(animateBurst);
+            }
+            animateBurst();
+        }
+
+        function updateHUDStats() {
+            const activeRm = roadmapsData[activeRoadmapIdx];
+            const parsed = parseMarkdownToRoadmapNodes(activeRm.content, activeRm.color);
+            
+            let totalStars = 0;
+            let conqueredStars = 0;
+
+            parsed.forEach(main => {
+                totalStars++;
+                if (conqueredNodesMap[main.id]) conqueredStars++;
+                main.subtopics.forEach(sub => {
+                    totalStars++;
+                    if (conqueredNodesMap[sub.id]) conqueredStars++;
+                });
+            });
+
+            const pct = totalStars > 0 ? Math.round((conqueredStars / totalStars) * 100) : 0;
+
+            document.getElementById('hud-sector-name').textContent = activeRm.title;
+            document.getElementById('hud-sector-dot').style.backgroundColor = activeRm.color;
+            document.getElementById('hud-resonance-val').textContent = `${pct}%`;
+            document.getElementById('hud-progress-fill').style.width = `${pct}%`;
+            document.getElementById('hud-nodes-count').textContent = `${conqueredStars} / ${totalStars} Stars`;
+
+            let rank = 'Neophyte Stargazer';
+            if (pct >= 100) rank = 'Cosmic Archon (Mastered)';
+            else if (pct >= 75) rank = 'Stellar Constellation Navigator';
+            else if (pct >= 50) rank = 'Astral Wayfinder';
+            else if (pct >= 25) rank = 'Initiate Astromancer';
+
+            document.getElementById('hud-rank-title').textContent = rank;
+        }
+
+        function renderRoadmapSelectorList() {
+            const container = document.getElementById('roadmap-list-container');
+            container.innerHTML = '';
+
+            document.getElementById('roadmap-count-badge').textContent = `${roadmapsData.length} Active`;
+
+            roadmapsData.forEach((rm, idx) => {
+                const isActive = idx === activeRoadmapIdx;
+                const item = document.createElement('button');
+                item.className = `w-full px-2.5 py-2 rounded-xl text-left font-serif text-xs transition-all flex items-center justify-between border ${
+                    isActive 
+                        ? 'bg-amber-500/15 border-amber-400/50 text-amber-200 font-semibold box-glow-gold' 
+                        : 'bg-white/5 hover:bg-white/10 border-white/5 text-slate-300'
+                }`;
+
+                item.onclick = () => selectRoadmapSector(idx);
+                item.innerHTML = `
+                    <div class="flex items-center gap-2 truncate pr-2">
+                        <span class="w-2 h-2 rounded-full shrink-0" style="background-color:${rm.color}"></span>
+                        <span class="truncate">${rm.title}</span>
+                    </div>
+                    ${isActive ? '<i data-lucide="chevron-right" class="w-3.5 h-3.5 text-amber-300 shrink-0"></i>' : ''}
+                `;
+                container.appendChild(item);
+            });
+
+            const selectEl = document.getElementById('md-file-select');
+            selectEl.innerHTML = '';
+            roadmapsData.forEach((rm, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = `${idx + 1}. ${rm.title}`;
+                selectEl.appendChild(opt);
+            });
+
+            lucide.createIcons();
+        }
+
+        function toggleMobileHUD(type) {
+            const hudTerritory = document.getElementById('hud-territory');
+            const hudSectors = document.getElementById('hud-roadmap-selector');
+
+            if (type === 'territory') {
+                hudSectors.classList.add('hidden');
+                hudTerritory.classList.toggle('hidden');
+                hudTerritory.classList.toggle('flex');
+            } else if (type === 'sectors') {
+                hudTerritory.classList.add('hidden');
+                hudSectors.classList.toggle('hidden');
+                hudSectors.classList.toggle('flex');
+            }
+        }
+
+        function selectRoadmapSector(idx) {
+            activeRoadmapIdx = idx;
+            renderRoadmapSelectorList();
+            buildCurrentConstellation3D();
+            updateHUDStats();
+            playCelestialChime(587.33);
+
+            // Hide mobile HUD overlays after selection
+            document.getElementById('hud-territory').classList.add('hidden');
+            document.getElementById('hud-roadmap-selector').classList.add('hidden');
+
+            if (activeView === 'globe') switchView('map');
+        }
+
+        function switchView(viewName) {
+            activeView = viewName;
+            
+            const btnGlobe = document.getElementById('btn-view-globe');
+            const btnMap = document.getElementById('btn-view-map');
+            const isMobile = window.innerWidth < 640;
+
+            if (viewName === 'globe') {
+                btnGlobe.className = 'px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-serif tracking-wider transition-all flex items-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-400/40';
+                btnMap.className = 'px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-serif tracking-wider transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+                
+                globeGroup.visible = true;
+                constellationGroup.visible = false;
+                gsapCameraMove(0, 15, isMobile ? 55 : 45, 0, 0, 0);
+            } else {
+                btnMap.className = 'px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-serif tracking-wider transition-all flex items-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-400/40';
+                btnGlobe.className = 'px-2.5 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-serif tracking-wider transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/5';
+
+                globeGroup.visible = false;
+                constellationGroup.visible = true;
+                gsapCameraMove(0, 10, isMobile ? 42 : 35, 0, 0, 0);
+            }
+            closeDetailPanel();
+        }
+
+        function gsapCameraMove(px, py, pz, tx, ty, tz) {
+            let startTime = null;
+            const duration = 800;
+            const startPos = camera.position.clone();
+            const targetPos = new THREE.Vector3(px, py, pz);
+
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+                const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+                camera.position.lerpVectors(startPos, targetPos, ease);
+                controls.target.set(tx, ty, tz);
+                controls.update();
+
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
+        function openExportModal() {
+            const modal = document.getElementById('export-modal');
+            const imgEl = document.getElementById('export-preview-img');
+
+            renderer.render(scene, camera);
+            const dataUrl = renderer.domElement.toDataURL('image/png');
+            imgEl.src = dataUrl;
+
+            document.getElementById('export-rank-text').textContent = document.getElementById('hud-rank-title').textContent;
+            document.getElementById('export-date-text').textContent = new Date().toLocaleDateString();
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('export-modal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function downloadMapSnapshot() {
+            const link = document.createElement('a');
+            link.download = `cosmic-atlas-roadmap-${Date.now()}.png`;
+            link.href = document.getElementById('export-preview-img').src;
+            link.click();
+            closeExportModal();
+        }
+
+        function toggleWorkflowDrawer() {
+            const drawer = document.getElementById('workflow-drawer');
+            const isHidden = drawer.classList.contains('translate-x-full');
+            if (isHidden) {
+                drawer.classList.remove('translate-x-full');
+                loadSelectedMarkdownFile(activeRoadmapIdx);
+            } else {
+                drawer.classList.add('translate-x-full');
+            }
+        }
+
+        function loadSelectedMarkdownFile(idx) {
+            const rm = roadmapsData[idx];
+            document.getElementById('md-file-select').value = idx;
+            document.getElementById('md-editor-input').value = rm.content;
+        }
+
+        function executeWorkflowCompiler() {
+            const idx = parseInt(document.getElementById('md-file-select').value, 10);
+            const newContent = document.getElementById('md-editor-input').value;
+
+            roadmapsData[idx].content = newContent;
+            saveData();
+
+            activeRoadmapIdx = idx;
+            renderRoadmapSelectorList();
+            create3DCelestialGlobe();
+            buildCurrentConstellation3D();
+            updateHUDStats();
+            
+            toggleWorkflowDrawer();
+            switchView('map');
+            playCelestialChime(1046.50);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const newTitle = file.name.replace('.md', '').replace(/[-_]/g, ' ');
+                
+                roadmapsData.push({
+                    id: 'custom-' + Date.now(),
+                    title: newTitle,
+                    color: '#00f0ff',
+                    content: text
+                });
+
+                activeRoadmapIdx = roadmapsData.length - 1;
+                saveData();
+                renderRoadmapSelectorList();
+                create3DCelestialGlobe();
+                loadSelectedMarkdownFile(activeRoadmapIdx);
+            };
+            reader.readAsText(file);
+        }
+
+        function resetCurrentRoadmapProgress() {
+            const activeRm = roadmapsData[activeRoadmapIdx];
+            const parsed = parseMarkdownToRoadmapNodes(activeRm.content, activeRm.color);
+            
+            parsed.forEach(main => {
+                delete conqueredNodesMap[main.id];
+                main.subtopics.forEach(sub => delete conqueredNodesMap[sub.id]);
+            });
+
+            saveData();
+            buildCurrentConstellation3D();
+            updateHUDStats();
+            closeDetailPanel();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Re-evaluate responsive layout toggles
+            if (window.innerWidth >= 768) {
+                document.getElementById('hud-territory').classList.remove('hidden');
+                document.getElementById('hud-roadmap-selector').classList.remove('hidden');
+                document.getElementById('hud-roadmap-selector').classList.add('flex');
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (globeGroup && globeGroup.visible) {
+                globeGroup.rotation.y += 0.0025;
+                miniGalaxies.forEach(g => {
+                    if (g.spiralParticles) {
+                        g.spiralParticles.rotation.z += 0.012;
+                    }
+                });
+            }
+
+            if (starfieldParticles) starfieldParticles.rotation.y += 0.0003;
+            if (nebulaParticles) nebulaParticles.rotation.y += 0.0005;
+
+            if (activeView === 'map') updateEnergyPulses();
+
+            controls.update();
+            updateProjectedLabelsPosition();
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
