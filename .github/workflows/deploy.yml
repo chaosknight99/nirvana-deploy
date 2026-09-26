@@ -18,7 +18,7 @@ jobs:
         uses: easingthemes/ssh-deploy@v5.0.3
         with:
           SSH_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
-          REMOTE_HOST: ${{ secrets.SFTP_HOST }}
+          REMOTE_HOST: ssh.us.stackcp.com
           REMOTE_USER: ${{ secrets.SFTP_USERNAME }}
           REMOTE_PORT: ${{ secrets.SFTP_PORT }}
           SOURCE: "./"
