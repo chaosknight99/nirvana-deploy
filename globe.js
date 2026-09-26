@@ -1,9 +1,9 @@
 (async function(){
   let manifest = [];
   try{
-    manifest = await (await fetch('roadmaps/manifest.json')).json();
+    manifest = await (await fetch('./manifest.json')).json();
   }catch(e){
-    document.getElementById('globeStage').innerHTML = '<p style="color:#c99">Could not load roadmaps/manifest.json</p>';
+    document.getElementById('globeStage').innerHTML = '<p style="color:#c99">Could not load manifest.json</p>';
     return;
   }
 
