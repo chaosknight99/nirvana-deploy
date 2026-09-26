@@ -1,19 +1,19 @@
 name: Deploy Portfolio to Hostnirvana
-
+ 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-
+ 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+ 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+ 
       - name: Deploy via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -26,7 +26,8 @@ jobs:
           server-dir: ${{ secrets.FTP_TARGET_DIR }}
           exclude: |
             **/.git*
-            **/.github/*
+            **/.git*/**
+            **/.github/**
             **/*.md
             **/deploy.sh
             **/.DS_Store
