@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atlas Preview</title>
+    <style>
+      :root {
+        --bg: #050a14;
+        --panel: rgba(14, 22, 34, 0.8);
+        --panel-border: rgba(165, 195, 255, 0.2);
+        --text: #edf4ff;
+        --muted: #a7bad8;
+        --shadow: rgba(78, 215, 197, 0.25);
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: radial-gradient(circle at top, #0b142a 0%, #040914 40%, #01050d 100%);
+        color: var(--text);
+        font-family: Inter, Arial, sans-serif;
+      }
+
+      body {
+        padding: 24px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 20px;
+        height: calc(100vh - 48px);
+      }
+
+      .sidebar,
+      .viewer {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 22px;
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.38);
+        backdrop-filter: blur(12px);
+      }
+
+      .sidebar {
+        padding: 18px 16px;
+        overflow: auto;
+      }
+
+      .sidebar h1 {
+        margin: 0 0 18px;
+        font-size: 1.35rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .map-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .map-button {
+        width: 100%;
+        text-align: left;
+        background: rgba(255,255,255,0.02);
+        color: var(--text);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        padding: 12px 12px;
+        cursor: pointer;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .map-button:hover {
+        transform: translateY(-1px);
+        border-color: rgba(120, 215, 255, 0.4);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+      }
+
+      .map-button.active {
+        border-color: rgba(120, 215, 255, 0.8);
+        box-shadow: 0 0 0 1px rgba(120, 215, 255, 0.25), 0 16px 30px rgba(61, 158, 220, 0.18);
+      }
+
+      .map-button .label {
+        display: block;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+
+      .map-button .meta {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .viewer {
+        position: relative;
+        overflow: hidden;
+        padding: 16px;
+      }
+
+      .viewer-header {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        z-index: 2;
+      }
+
+      .viewer-header .eyebrow {
+        display: block;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 0.68rem;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .viewer-header h2 {
+        margin: 0;
+        font-size: clamp(1.6rem, 2vw, 2.7rem);
+      }
+
+      .viewer-header p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        border-radius: 18px;
+      }
+
+      .topic-node {
+        fill: #dfeaff;
+        stroke: rgba(255,255,255,0.6);
+        stroke-width: 1.4;
+      }
+
+      .sub-node {
+        fill: rgba(255,255,255,0.28);
+        stroke: rgba(255,255,255,0.35);
+      }
+
+      .topic-label {
+        fill: #eef3ff;
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      .sub-label {
+        fill: rgba(230, 240, 255, 0.8);
+        font-size: 10px;
+      }
+
+      .link-line {
+        stroke: rgba(210, 220, 250, 0.22);
+        stroke-width: 1.5;
+      }
+
+      @media (max-width: 860px) {
+        body { padding: 12px; }
+        .layout { grid-template-columns: 1fr; height: auto; }
+        .sidebar { max-height: 260px; }
+        .viewer { min-height: 60vh; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1>Roadmaps</h1>
+        <div id="map-list" class="map-list"></div>
+      </aside>
+
+      <main class="viewer">
+        <div class="viewer-header">
+          <span id="map-eyebrow" class="eyebrow">ATLAS</span>
+          <h2 id="map-title">Loading…</h2>
+          <p id="map-tagline">Preparing the map…</p>
+        </div>
+        <svg id="map-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet"></svg>
+      </main>
+    </div>
+
+    <script>
+      const list = document.getElementById('map-list');
+      const svg = document.getElementById('map-svg');
+      const titleEl = document.getElementById('map-title');
+      const taglineEl = document.getElementById('map-tagline');
+      let maps = [];
+      let currentId = null;
+
+      function createSvgEl(tag, attrs = {}) {
+        const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+        return node;
+      }
+
+      function renderMap(map) {
+        titleEl.textContent = map.title;
+        taglineEl.textContent = map.tagline || 'Capability roadmap';
+
+        svg.innerHTML = '';
+
+        const bg = createSvgEl('rect', { x: 0, y: 0, width: 1200, height: 800, fill: 'rgba(2,6,16,0.4)' });
+        svg.appendChild(bg);
+
+        const centerX = 600;
+        const centerY = 420;
+
+        const topicRadius = 180;
+        const mapColor = map.color || '#57e0c9';
+
+        map.topics.forEach((topic, topicIndex) => {
+          const angle = (Math.PI * 2 * topicIndex) / map.topics.length - Math.PI / 2;
+          const tx = centerX + Math.cos(angle) * topicRadius;
+          const ty = centerY + Math.sin(angle) * topicRadius;
+
+          const line = createSvgEl('line', {
+            x1: centerX,
+            y1: centerY,
+            x2: tx,
+            y2: ty,
+            stroke: 'rgba(210, 220, 255, 0.22)',
+            'stroke-width': 1.5
+          });
+          svg.appendChild(line);
+
+          const mainNode = createSvgEl('circle', {
+            cx: tx,
+            cy: ty,
+            r: 28,
+            fill: mapColor,
+            opacity: 0.95,
+            class: 'topic-node',
+            stroke: 'rgba(255,255,255,0.8)',
+            'stroke-width': 1.8
+          });
+          svg.appendChild(mainNode);
+
+          const label = createSvgEl('text', {
+            x: tx,
+            y: ty + 52,
+            'text-anchor': 'middle',
+            class: 'topic-label'
+          });
+          label.textContent = topic.title;
+          svg.appendChild(label);
+
+          const subtopicCount = topic.subtopics.length || 1;
+          topic.subtopics.forEach((sub, subIndex) => {
+            const subAngle = (Math.PI * 2 * subIndex) / subtopicCount - Math.PI / 2;
+            const sx = tx + Math.cos(subAngle) * 110;
+            const sy = ty + Math.sin(subAngle) * 110;
+
+            const subLine = createSvgEl('line', {
+              x1: tx,
+              y1: ty,
+              x2: sx,
+              y2: sy,
+              stroke: 'rgba(210,220,255,0.18)',
+              'stroke-width': 1.2
+            });
+            svg.appendChild(subLine);
+
+            const subNode = createSvgEl('circle', {
+              cx: sx,
+              cy: sy,
+              r: 11,
+              fill: 'rgba(255,255,255,0.25)',
+              class: 'sub-node',
+              stroke: 'rgba(255,255,255,0.4)'
+            });
+            svg.appendChild(subNode);
+
+            const subLabel = createSvgEl('text', {
+              x: sx,
+              y: sy + 20,
+              'text-anchor': 'middle',
+              class: 'sub-label'
+            });
+            subLabel.textContent = sub.name;
+            svg.appendChild(subLabel);
+          });
+        });
+
+        const centerNode = createSvgEl('circle', {
+          cx: centerX,
+          cy: centerY,
+          r: 38,
+          fill: mapColor,
+          opacity: 0.94,
+          stroke: 'rgba(255,255,255,0.75)',
+          'stroke-width': 2
+        });
+        svg.appendChild(centerNode);
+      }
+
+      function renderList() {
+        list.innerHTML = '';
+        maps.forEach((map) => {
+          const button = document.createElement('button');
+          button.className = 'map-button' + (map.id === currentId ? ' active' : '');
+          button.type = 'button';
+          button.innerHTML = `
+            <span class="label">${map.title}</span>
+            <span class="meta">${map.topics.length} primary tracks</span>
+          `;
+          button.addEventListener('click', () => {
+            currentId = map.id;
+            renderMap(map);
+            renderList();
+          });
+          list.appendChild(button);
+        });
+      }
+
+      async function init() {
+        const response = await fetch('./maps.json');
+        if (!response.ok) {
+          throw new Error('maps.json not found');
+        }
+
+        maps = await response.json();
+        currentId = maps[0]?.id || null;
+
+        if (maps.length) {
+          renderMap(maps[0]);
+          renderList();
+        }
+      }
+
+      init().catch((err) => {
+        titleEl.textContent = 'Map not ready';
+        taglineEl.textContent = 'Run node build.js to generate maps.json';
+        console.error(err);
+      });
+    </script>
+  </body>
+</html>

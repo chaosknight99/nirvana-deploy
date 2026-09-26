@@ -1,0 +1,546 @@
+[
+  {
+    "id": "ai-engineering",
+    "file": "ai-engineering.md",
+    "color": "#57e0c9",
+    "accent": "#b98bf0",
+    "title": "AI Engineering & Systems",
+    "tagline": "Cloud Engineer → AI Engineer → AI Systems Engineer → AI Architect",
+    "topics": [
+      {
+        "title": "Baseline",
+        "subtopics": [
+          {
+            "name": "REST & FastAPI",
+            "description": "APIs, auth, OBO, managed identity."
+          },
+          {
+            "name": "IaC & CI/CD",
+            "description": "Terraform/Bicep and GitHub Actions."
+          }
+        ]
+      },
+      {
+        "title": "LLM Fundamentals",
+        "subtopics": [
+          {
+            "name": "Tokens & Embeddings",
+            "description": "Text to tokens to IDs to vector representations."
+          },
+          {
+            "name": "Attention & Transformer",
+            "description": "What attention does across stacked blocks."
+          }
+        ]
+      },
+      {
+        "title": "LLM App Engineering",
+        "subtopics": [
+          {
+            "name": "Structured Outputs",
+            "description": "JSON schemas and function calling."
+          },
+          {
+            "name": "LLM Gateway",
+            "description": "Provider-agnostic layer over OpenAI, Claude, Azure."
+          }
+        ]
+      },
+      {
+        "title": "RAG",
+        "subtopics": [
+          {
+            "name": "Chunking & Vector DB",
+            "description": "Parsing, chunking, embedding, retrieval."
+          },
+          {
+            "name": "Reranking & Citations",
+            "description": "Context construction, grounded answers."
+          }
+        ]
+      },
+      {
+        "title": "Agents",
+        "subtopics": [
+          {
+            "name": "Tool-Calling Loop",
+            "description": "Question to tool decision to result to answer."
+          },
+          {
+            "name": "Multi-Agent Patterns",
+            "description": "Planning, reflection, retries, permissions."
+          }
+        ]
+      },
+      {
+        "title": "MCP",
+        "subtopics": [
+          {
+            "name": "MCP Server & Client",
+            "description": "Tools, resources and prompts at protocol level."
+          },
+          {
+            "name": "Auth & Auditability",
+            "description": "Authorization, statelessness, tool permissions."
+          }
+        ]
+      },
+      {
+        "title": "Evaluation",
+        "subtopics": [
+          {
+            "name": "Groundedness Testing",
+            "description": "Offline eval sets scoring expected vs actual."
+          },
+          {
+            "name": "Tool-Call Accuracy",
+            "description": "Judging process, not just final outcome."
+          }
+        ]
+      },
+      {
+        "title": "AI System Design",
+        "subtopics": [
+          {
+            "name": "Semantic Cache",
+            "description": "Cutting redundant model calls."
+          },
+          {
+            "name": "Model Router",
+            "description": "Routing requests by cost and capability."
+          }
+        ]
+      },
+      {
+        "title": "AI Infrastructure",
+        "subtopics": [
+          {
+            "name": "Inference Serving",
+            "description": "Prefill/decode, batching, TTFT, throughput."
+          },
+          {
+            "name": "GPU & Kubernetes",
+            "description": "Quantization, GPU Operator, autoscaling."
+          }
+        ]
+      },
+      {
+        "title": "ATLAS",
+        "subtopics": [
+          {
+            "name": "Orchestration & Approval",
+            "description": "Agent loop with human approval gates."
+          },
+          {
+            "name": "Production Deployment",
+            "description": "Auditability, cost and quality monitoring."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cloud-platform",
+    "file": "cloud-platform.md",
+    "color": "#7fa8f0",
+    "accent": "#57e0c9",
+    "title": "Cloud Platform Engineering",
+    "tagline": "From provisioning resources to owning the platform",
+    "topics": [
+      {
+        "title": "Compute & Networking",
+        "subtopics": [
+          {
+            "name": "VMs & Containers",
+            "description": "Compute fundamentals across providers."
+          },
+          {
+            "name": "VNets & Private Endpoints",
+            "description": "Network isolation and secure connectivity."
+          }
+        ]
+      },
+      {
+        "title": "Identity & Access",
+        "subtopics": [
+          {
+            "name": "RBAC & Managed Identity",
+            "description": "Least-privilege access without secrets."
+          },
+          {
+            "name": "OAuth / OBO",
+            "description": "Delegated access across services."
+          }
+        ]
+      },
+      {
+        "title": "Infrastructure as Code",
+        "subtopics": [
+          {
+            "name": "Terraform",
+            "description": "State, modules, workspaces."
+          },
+          {
+            "name": "Bicep",
+            "description": "Native Azure IaC and what-if deployments."
+          }
+        ]
+      },
+      {
+        "title": "CI/CD",
+        "subtopics": [
+          {
+            "name": "Pipelines",
+            "description": "Build, test, approve, deploy."
+          },
+          {
+            "name": "GitOps",
+            "description": "Declarative deployment from a single source of truth."
+          }
+        ]
+      },
+      {
+        "title": "Observability",
+        "subtopics": [
+          {
+            "name": "Metrics & Logs",
+            "description": "Golden signals and structured logging."
+          },
+          {
+            "name": "Distributed Tracing",
+            "description": "Following a request across services."
+          }
+        ]
+      },
+      {
+        "title": "Landing Zones",
+        "subtopics": [
+          {
+            "name": "Governance & Policy",
+            "description": "Guardrails at scale."
+          },
+          {
+            "name": "Hub-Spoke Networking",
+            "description": "Centralized connectivity patterns."
+          }
+        ]
+      },
+      {
+        "title": "Platform Engineering",
+        "subtopics": [
+          {
+            "name": "Internal Developer Platform",
+            "description": "Self-service infrastructure."
+          },
+          {
+            "name": "Cost & FinOps",
+            "description": "Making cloud spend visible and accountable."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "kubernetes-mastery",
+    "file": "kubernetes-mastery.md",
+    "color": "#b98bf0",
+    "accent": "#ff8ad4",
+    "title": "Kubernetes Mastery",
+    "tagline": "From kubectl apply to running the cluster",
+    "topics": [
+      {
+        "title": "Core Objects",
+        "subtopics": [
+          {
+            "name": "Pods & Deployments",
+            "description": "Desired state and rollouts."
+          },
+          {
+            "name": "Services & Ingress",
+            "description": "Getting traffic to the right place."
+          }
+        ]
+      },
+      {
+        "title": "Configuration",
+        "subtopics": [
+          {
+            "name": "ConfigMaps & Secrets",
+            "description": "Externalized configuration."
+          },
+          {
+            "name": "Helm",
+            "description": "Templated, versioned releases."
+          }
+        ]
+      },
+      {
+        "title": "Networking",
+        "subtopics": [
+          {
+            "name": "CNI & Network Policy",
+            "description": "Pod-to-pod traffic rules."
+          },
+          {
+            "name": "Service Mesh",
+            "description": "mTLS, retries, traffic shaping."
+          }
+        ]
+      },
+      {
+        "title": "Storage",
+        "subtopics": [
+          {
+            "name": "Persistent Volumes",
+            "description": "Storage classes and claims."
+          },
+          {
+            "name": "StatefulSets",
+            "description": "Ordered, stable identities for stateful apps."
+          }
+        ]
+      },
+      {
+        "title": "Scaling & Resilience",
+        "subtopics": [
+          {
+            "name": "HPA & Cluster Autoscaler",
+            "description": "Scaling pods and nodes."
+          },
+          {
+            "name": "Pod Disruption Budgets",
+            "description": "Staying available during change."
+          }
+        ]
+      },
+      {
+        "title": "Security",
+        "subtopics": [
+          {
+            "name": "Pod Security Standards",
+            "description": "Constraining what workloads can do."
+          },
+          {
+            "name": "Image Scanning & Admission Control",
+            "description": "Stopping bad images at the gate."
+          }
+        ]
+      },
+      {
+        "title": "Operating the Cluster",
+        "subtopics": [
+          {
+            "name": "GPU Scheduling",
+            "description": "Serving ML workloads efficiently."
+          },
+          {
+            "name": "Multi-Tenancy & Cost",
+            "description": "Namespaces, quotas, chargeback."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rag-engineering",
+    "file": "rag-engineering.md",
+    "color": "#ff8ad4",
+    "accent": "#7fa8f0",
+    "title": "RAG Engineering",
+    "tagline": "Retrieval + generation, done properly",
+    "topics": [
+      {
+        "title": "Document Processing",
+        "subtopics": [
+          {
+            "name": "Parsing",
+            "description": "PDFs, HTML, tables, and messy formats."
+          },
+          {
+            "name": "Chunking Strategy",
+            "description": "Fixed, semantic, and recursive chunking."
+          }
+        ]
+      },
+      {
+        "title": "Embeddings",
+        "subtopics": [
+          {
+            "name": "Embedding Models",
+            "description": "Choosing and evaluating embedding models."
+          },
+          {
+            "name": "Vector Databases",
+            "description": "Indexing and approximate nearest neighbor search."
+          }
+        ]
+      },
+      {
+        "title": "Retrieval",
+        "subtopics": [
+          {
+            "name": "Hybrid Search",
+            "description": "Combining keyword and vector search."
+          },
+          {
+            "name": "Reranking",
+            "description": "Improving precision after initial retrieval."
+          }
+        ]
+      },
+      {
+        "title": "Generation",
+        "subtopics": [
+          {
+            "name": "Context Construction",
+            "description": "Assembling prompts from retrieved chunks."
+          },
+          {
+            "name": "Citations",
+            "description": "Attributing answers back to sources."
+          }
+        ]
+      },
+      {
+        "title": "Failure Modes",
+        "subtopics": [
+          {
+            "name": "Hallucination Detection",
+            "description": "Catching ungrounded claims."
+          },
+          {
+            "name": "Stale Data Handling",
+            "description": "Keeping the index fresh."
+          }
+        ]
+      },
+      {
+        "title": "Evaluation",
+        "subtopics": [
+          {
+            "name": "Retrieval Metrics",
+            "description": "Precision, recall, and relevance at k."
+          },
+          {
+            "name": "Groundedness Scoring",
+            "description": "Measuring answer faithfulness."
+          }
+        ]
+      },
+      {
+        "title": "Production RAG",
+        "subtopics": [
+          {
+            "name": "Latency & Cost Dashboard",
+            "description": "Operational visibility."
+          },
+          {
+            "name": "Continuous Evaluation",
+            "description": "Regression-testing your RAG pipeline."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "security-identity",
+    "file": "security-identity.md",
+    "color": "#f3c25c",
+    "accent": "#ff8ad4",
+    "title": "Security & Identity",
+    "tagline": "Zero trust, from theory to enforced policy",
+    "topics": [
+      {
+        "title": "Identity Fundamentals",
+        "subtopics": [
+          {
+            "name": "Authentication vs Authorization",
+            "description": "Knowing who, then knowing what."
+          },
+          {
+            "name": "OAuth 2.0 / OIDC",
+            "description": "Modern delegated identity flows."
+          }
+        ]
+      },
+      {
+        "title": "Access Control",
+        "subtopics": [
+          {
+            "name": "RBAC & ABAC",
+            "description": "Role and attribute-based access."
+          },
+          {
+            "name": "Managed Identities",
+            "description": "Removing secrets from application code."
+          }
+        ]
+      },
+      {
+        "title": "Network Security",
+        "subtopics": [
+          {
+            "name": "Private Endpoints",
+            "description": "Removing public exposure of services."
+          },
+          {
+            "name": "Zero Trust Networking",
+            "description": "Never trust, always verify."
+          }
+        ]
+      },
+      {
+        "title": "Secrets & Keys",
+        "subtopics": [
+          {
+            "name": "Key Vault / Secret Managers",
+            "description": "Centralized, audited secret storage."
+          },
+          {
+            "name": "Rotation & Expiry",
+            "description": "Reducing blast radius over time."
+          }
+        ]
+      },
+      {
+        "title": "Threat Detection",
+        "subtopics": [
+          {
+            "name": "SIEM & Alerting",
+            "description": "Correlating signals across systems."
+          },
+          {
+            "name": "Anomaly Detection",
+            "description": "Spotting the unusual, not just the known-bad."
+          }
+        ]
+      },
+      {
+        "title": "Compliance & Governance",
+        "subtopics": [
+          {
+            "name": "Policy as Code",
+            "description": "Enforcing guardrails automatically."
+          },
+          {
+            "name": "Audit Logging",
+            "description": "A defensible trail of who did what."
+          }
+        ]
+      },
+      {
+        "title": "Security Architecture",
+        "subtopics": [
+          {
+            "name": "Defense in Depth",
+            "description": "Layered controls, no single point of failure."
+          },
+          {
+            "name": "Incident Response",
+            "description": "Preparing for the day something gets through."
+          }
+        ]
+      }
+    ]
+  }
+]
